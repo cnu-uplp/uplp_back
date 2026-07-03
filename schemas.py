@@ -18,3 +18,13 @@ class UserInfo(BaseModel):
 class AuthResponse(BaseModel):
     accessToken: str
     user: UserInfo
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ChatMessage] = []

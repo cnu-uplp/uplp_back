@@ -1,6 +1,7 @@
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.0
+openai==1.59.6
 bcrypt==5.0.0
 cffi==2.0.0
 click==8.4.1

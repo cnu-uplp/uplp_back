@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: uplp-back
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false          # Render 대시보드에서 직접 입력 (git에 올리지 않음)
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+      - key: PYTHON_VERSION
+        value: "3.12.7"
