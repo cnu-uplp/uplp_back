@@ -69,7 +69,7 @@ def kakao_login(payload: KakaoLoginRequest, db: Session = Depends(get_db)):
         if token_res.status_code != 200:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="카카오 토큰 교환에 실패했습니다.",
+                detail=f"카카오 토큰 교환에 실패했습니다: {token_res.text}",
             )
         kakao_token = token_res.json().get("access_token")
 
@@ -81,7 +81,7 @@ def kakao_login(payload: KakaoLoginRequest, db: Session = Depends(get_db)):
         if me_res.status_code != 200:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="카카오 사용자 조회에 실패했습니다.",
+                detail=f"카카오 사용자 조회에 실패했습니다: {me_res.text}",
             )
         me = me_res.json()
 
