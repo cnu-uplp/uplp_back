@@ -12,8 +12,14 @@ class Settings(BaseSettings):
     groq_base_url: str = "https://api.groq.com/openai/v1"
     groq_model: str = "llama-3.1-8b-instant"
 
+    # 카카오 로그인
+    kakao_rest_api_key: str = ""
+    kakao_client_secret: str = ""  # 콘솔에서 켰을 때만 사용
+
     class Config:
         env_file = ".env"
+        # .env / 환경변수에 여분 값(PYTHON_VERSION 등)이 있어도 무시하고 앱을 기동한다.
+        extra = "ignore"
 
 
 settings = Settings()

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
-from routers import auth, upalupa
+from routers import auth, upalupa, users
 
 # DB가 없어도(예: 우피 채팅만 데모하는 배포 환경) 앱은 기동되도록 감싼다.
 try:
@@ -14,7 +14,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://uplp-front.vercel.app",  # 프로덕션 프론트
+    ],
     # Vercel 배포/프리뷰 도메인 허용 (데모용). 프론트는 Vercel에 있으므로 여기가 핵심.
     allow_origin_regex=r"https://.*\.vercel\.app",
     # (참고) 백엔드를 어디에 올리든 CORS는 '프론트 도메인' 기준입니다.

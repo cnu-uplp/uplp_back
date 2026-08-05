@@ -10,6 +10,7 @@ ecdsa==0.19.2
 fastapi==0.138.0
 h11==0.16.0
 httptools==0.8.0
+httpx==0.28.1
 idna==3.18
 passlib==1.7.4
 psycopg2-binary==2.9.12
