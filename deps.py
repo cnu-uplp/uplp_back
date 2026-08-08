@@ -40,3 +40,32 @@ def get_current_user(
             detail="사용자를 찾을 수 없습니다.",
         )
     return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """토큰이 없거나 유효하지 않으면 None (게스트 취급, 에러 없이)."""
+    if credentials is None:
+        return None
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        return None
+    return db.get(User, user_id)
+
+
+def get_current_admin(current: User = Depends(get_current_user)) -> User:
+    """관리자(role == "admin")만 통과. 아니면 403."""
+    if current.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자만 접근할 수 있습니다.",
+        )
+    return current

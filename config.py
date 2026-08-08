@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     kakao_rest_api_key: str = ""
     kakao_client_secret: str = ""  # 콘솔에서 켰을 때만 사용
 
+    # 관리자 부트스트랩: admin 권한을 줄 카카오 id 목록 (콤마 구분)
+    # 예) ADMIN_KAKAO_IDS="5023767808,1234567890"
+    admin_kakao_ids: str = ""
+
+    # 스포렉스 레인대관 신청서에 들어가는 동아리 정보 (임원 바뀌면 env로 교체)
+    club_name: str = "우파루파"
+    club_signer: str = "유진우"
+    club_contact: str = "010-3058-7675"
+    rental_hours: str = "2시간"
+
     class Config:
         env_file = ".env"
         # .env / 환경변수에 여분 값(PYTHON_VERSION 등)이 있어도 무시하고 앱을 기동한다.
