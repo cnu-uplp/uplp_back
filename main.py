@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from database import Base, engine
-from routers import auth, swim, upalupa, users
+from routers import auth, notices, swim, upalupa, users
 
 # DB가 없어도(예: 우피 채팅만 데모하는 배포 환경) 앱은 기동되도록 감싼다.
 try:
@@ -54,6 +54,7 @@ app.include_router(auth.router)
 app.include_router(upalupa.router)
 app.include_router(users.router)
 app.include_router(swim.router)
+app.include_router(notices.router)
 
 
 @app.get("/")

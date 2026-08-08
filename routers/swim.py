@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
-from deps import get_current_admin, get_current_user, get_current_user_optional
+from deps import get_current_staff, get_current_user, get_current_user_optional
 from models import SwimApplication, SwimSession, User
 from schemas import SwimApplyRequest, SwimCapacityUpdate, SwimSessionCreate
 
@@ -115,7 +115,7 @@ def list_sessions(
 @router.post("/sessions")
 def create_session(
     payload: SwimSessionCreate,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """정기수영 열기 — 관리자 전용. 신청 시작 전엔 '오픈 예정'으로만 노출된다."""
@@ -216,7 +216,7 @@ def cancel(
 @router.post("/sessions/{sid}/merge")
 def merge(
     sid: int,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """병합 — 관리자 전용. 후순위 대기열을 FIFO 그대로 빈자리·예비번호 계산에 합류시킨다.
@@ -250,7 +250,7 @@ def merge(
 def update_session(
     sid: int,
     payload: SwimSessionCreate,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """정기수영 수정 — 관리자 전용, '신청이 열리기 전(오픈 예정)'에만 가능.
@@ -292,7 +292,7 @@ def update_session(
 def update_capacity(
     sid: int,
     payload: SwimCapacityUpdate,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """인원(정원)만 수정 — 관리자 전용. 신청을 받는 중에도 조절할 수 있다.
@@ -321,7 +321,7 @@ def update_capacity(
 @router.post("/sessions/{sid}/close")
 def close_session(
     sid: int,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """즉시 마감 — 관리자 전용. 마감 시각을 지금으로 당겨 신청·취소를 막고
@@ -345,7 +345,7 @@ def close_session(
 @router.delete("/sessions/{sid}")
 def delete_session(
     sid: int,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """정기수영 삭제 — 관리자 전용. 잘못 만든 회차를 신청 내역과 함께 제거한다."""
@@ -376,7 +376,8 @@ def roster(sid: int, db: Session = Depends(get_db)):
         u = users.get(a.user_id)
         if u is None:
             return f"회원{a.user_id}"
-        return u.nickname or u.name or f"회원{u.id}"
+        # 실명(name) 우선 — 카카오 닉네임은 대관 명단에 쓸 수 없다
+        return u.name or u.nickname or f"회원{u.id}"
 
     divisions = {}
     for div in DIVISIONS:
@@ -397,7 +398,7 @@ def _kst(dt: datetime) -> str:
 @router.get("/sessions/{sid}/roster.docx")
 def roster_docx(
     sid: int,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_current_staff),
     db: Session = Depends(get_db),
 ):
     """명단 docx 다운로드 — 관리자 전용, 신청 '마감 후'에만 가능."""
@@ -428,7 +429,7 @@ def roster_docx(
         u = users.get(a.user_id)
         if u is None:
             return (f"회원{a.user_id}", "-", "-")
-        name = u.nickname or u.name or f"회원{u.id}"
+        name = u.name or u.nickname or f"회원{u.id}"
         phone = u.phone_number or "-"
         dept = " ".join(x for x in (u.college, u.department) if x) or "-"
         return (name, phone, dept)

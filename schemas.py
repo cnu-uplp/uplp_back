@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -13,12 +15,48 @@ class KakaoLoginRequest(BaseModel):
 
 class ProfileUpdateRequest(BaseModel):
     phoneNumber: str
+    name: str | None = None          # 실명 — 대관 명단·인사말에 쓴다
     college: str | None = None      # 단과대
     department: str | None = None    # 학과
 
 
+class NoticeCreate(BaseModel):
+    category: str = "notice"         # "notice"(공지사항) | "schedule"(일정)
+    title: str
+    body: str | None = None
+    eventDate: str | None = None     # 일정 날짜 (YYYY-MM-DD)
+    pinned: bool = False
+
+
+class NoticeUpdate(BaseModel):
+    """부분 수정 — 보낸 필드만 반영한다."""
+
+    category: str | None = None
+    title: str | None = None
+    body: str | None = None
+    eventDate: str | None = None
+    pinned: bool | None = None
+
+
+class NoticeOut(BaseModel):
+    id: int
+    category: str
+    title: str
+    body: str | None = None
+    eventDate: str | None = Field(default=None, validation_alias="event_date")
+    pinned: bool
+    createdAt: datetime | None = Field(default=None, validation_alias="created_at")
+    updatedAt: datetime | None = Field(default=None, validation_alias="updated_at")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
 class DeprioritizedUpdate(BaseModel):
     value: bool
+
+
+class RoleUpdate(BaseModel):
+    role: str  # "member"(일반 부원) | "executive"(임원진) | "admin"(관리자)
 
 
 class SwimSessionCreate(BaseModel):

@@ -6,6 +6,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -25,7 +26,9 @@ class User(Base):
     phone_number = Column(String, nullable=True)
     college = Column(String, nullable=True)      # 단과대
     department = Column(String, nullable=True)    # 학과
-    # 권한: "member"(기본) / "admin"(임원)
+    # 권한: "member"(일반 부원) / "executive"(임원진) / "admin"(관리자)
+    #   executive — 정기수영 열기·마감, 공지 작성, 부원 관리
+    #   admin     — executive 권한 전부 + 역할 변경(임원진 임명·해제)
     role = Column(String, nullable=False, default="member", server_default="member")
     # 후순위 상태: True면 정기수영 신청 시 후순위 대기열로 들어간다 (관리자가 지정)
     is_deprioritized = Column(Boolean, nullable=False, default=False, server_default="false")
@@ -36,6 +39,23 @@ class User(Base):
     hashed_password = Column(String, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
+
+
+class Notice(Base):
+    """공지사항 / 일정. 관리자가 작성·수정·삭제하고 모두가 읽는다."""
+
+    __tablename__ = "notices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # "notice"(공지사항) | "schedule"(일정)
+    category = Column(String, nullable=False, default="notice", server_default="notice")
+    title = Column(String, nullable=False)
+    body = Column(Text, nullable=True)          # 본문 (없어도 됨 — 제목만 있는 공지 허용)
+    event_date = Column(String, nullable=True)  # 일정 날짜 (YYYY-MM-DD). 공지는 비워둔다.
+    pinned = Column(Boolean, nullable=False, default=False, server_default="false")
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=True)
 
 
 class SwimSession(Base):
