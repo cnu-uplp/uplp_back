@@ -17,7 +17,10 @@ router = APIRouter(prefix="/api/content", tags=["content"])
 
 # 섹션을 붙일 수 있는 페이지. 임의 문자열을 허용하면 오타로 만든 섹션이
 # 어느 화면에도 안 나오면서 DB에만 쌓인다.
-VALID_PAGES = ("home", "about")
+#   home  / about  — 마크다운 본문 섹션
+#   info          — 동아리 기본 정보(항목: 값). 홈 히어로와 소개 페이지가 같은 목록을
+#                   읽는다. 활동 시간을 한 번만 고치면 두 화면이 같이 바뀐다.
+VALID_PAGES = ("home", "about", "info")
 
 # 6칸 그리드에서 차지하는 칸 수. 픽셀 자유 배치 대신 칸 단위로만 고르게 해서
 # 어떤 화면 폭에서도 레이아웃이 성립하게 한다. half 4개 = 2x2.
