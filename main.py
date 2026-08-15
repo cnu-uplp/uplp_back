@@ -1,7 +1,11 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
+from config import settings
 from database import Base, engine
 from routers import auth, content, notices, swim, upalupa, users
 
@@ -66,6 +70,9 @@ try:
                 "NOT NULL DEFAULT 'full'"
             )
         )
+        conn.execute(
+            text("ALTER TABLE notices ADD COLUMN IF NOT EXISTS image_url VARCHAR")
+        )
 except Exception as exc:  # noqa: BLE001
     print(f"[warn] 컬럼 보강 건너뜀: {exc}")
 
@@ -93,6 +100,13 @@ app.include_router(users.router)
 app.include_router(swim.router)
 app.include_router(notices.router)
 app.include_router(content.router)
+
+# 공지 첨부 이미지 정적 서빙.
+# nginx가 모든 경로를 이 앱으로 넘기므로 여기서 처리하면 nginx 설정을 안 건드려도 된다.
+# 폴더가 없으면 StaticFiles가 기동 시 예외를 내므로 먼저 만들어 둔다.
+_uploads = Path(settings.upload_dir)
+_uploads.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads), name="uploads")
 
 
 @app.get("/")

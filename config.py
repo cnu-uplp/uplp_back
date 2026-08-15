@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     #    켜두지 않으면 아무나 가입해서 바로 신청하고 명단의 실명까지 볼 수 있다.
     require_approval: bool = True
 
+    # 공지 첨부 이미지 저장 위치 (컨테이너 안 경로).
+    # 운영에서는 호스트 볼륨을 여기에 붙인다 — 컨테이너를 지우고 다시 만들어도
+    # 이미지가 남아야 하기 때문이다.
+    #   docker run -v /var/uplp/uploads:/app/uploads ...
+    upload_dir: str = "uploads"
+
     # 스포렉스 레인대관 신청서에 들어가는 동아리 정보.
     # 담당자 실명·연락처는 개인정보이므로 코드에 기본값을 두지 않는다.
     # 반드시 환경변수(CLUB_SIGNER, CLUB_CONTACT)로 주입할 것.

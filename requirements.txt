@@ -34,3 +34,4 @@ watchfiles==1.2.0
 websockets==16.0
 python-docx==1.1.2
 lxml==5.3.0
+python-multipart==0.0.20

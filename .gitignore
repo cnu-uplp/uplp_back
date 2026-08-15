@@ -2,3 +2,6 @@ venv/
 __pycache__/
 *.pyc
 .env
+
+# 공지 첨부 이미지 (로컬 개발 시 생성)
+uploads/

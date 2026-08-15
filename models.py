@@ -81,9 +81,30 @@ class Notice(Base):
     body = Column(Text, nullable=True)          # 본문 (없어도 됨 — 제목만 있는 공지 허용)
     event_date = Column(String, nullable=True)  # 일정 날짜 (YYYY-MM-DD). 공지는 비워둔다.
     pinned = Column(Boolean, nullable=False, default=False, server_default="false")
+    # 첨부 이미지 경로 ("/uploads/xxx.jpg"). 한 글에 한 장.
+    image_url = Column(String, nullable=True)
     author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=True)
+
+
+class NoticeComment(Base):
+    """공지·일정에 달리는 댓글.
+
+    글은 임원진만 쓰지만 댓글은 승인된 회원이면 누구나 쓴다 — 질문·참석 여부를
+    카톡이 아니라 글 아래에서 주고받게 하려는 것이다.
+    지운 글의 댓글이 남으면 orphan이 되므로 notice 삭제 시 함께 지운다(CASCADE).
+    """
+
+    __tablename__ = "notice_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    notice_id = Column(
+        Integer, ForeignKey("notices.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
 class ContentSection(Base):

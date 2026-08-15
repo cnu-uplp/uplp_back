@@ -31,6 +31,7 @@ class NoticeCreate(BaseModel):
     body: str | None = None
     eventDate: str | None = None     # 일정 날짜 (YYYY-MM-DD)
     pinned: bool = False
+    imageUrl: str | None = None      # 업로드 후 받은 "/uploads/xxx.jpg"
 
 
 class NoticeUpdate(BaseModel):
@@ -41,6 +42,7 @@ class NoticeUpdate(BaseModel):
     body: str | None = None
     eventDate: str | None = None
     pinned: bool | None = None
+    imageUrl: str | None = None      # 빈 문자열이면 이미지 제거
 
 
 class NoticeOut(BaseModel):
@@ -50,10 +52,26 @@ class NoticeOut(BaseModel):
     body: str | None = None
     eventDate: str | None = Field(default=None, validation_alias="event_date")
     pinned: bool
+    imageUrl: str | None = Field(default=None, validation_alias="image_url")
     createdAt: datetime | None = Field(default=None, validation_alias="created_at")
     updatedAt: datetime | None = Field(default=None, validation_alias="updated_at")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class CommentCreate(BaseModel):
+    body: str
+
+
+class CommentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    body: str
+    # 작성자 표시 이름 ("김철수 21"). 라우터에서 채워 넣는다.
+    author: str | None = None
+    authorId: int | None = Field(default=None, validation_alias="author_id")
+    createdAt: datetime | None = Field(default=None, validation_alias="created_at")
 
 
 class DeprioritizedUpdate(BaseModel):
