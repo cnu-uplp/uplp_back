@@ -86,6 +86,31 @@ class Notice(Base):
     updated_at = Column(DateTime, nullable=True)
 
 
+class ContentSection(Base):
+    """홈·동아리 소개 페이지의 본문 섹션. 임원진이 웹에서 직접 고친다.
+
+    문구가 코드에 박혀 있으면 회칙·회비·활동 시간이 바뀔 때마다 배포를 해야 한다.
+    섹션 단위로 DB에 두고 마크다운으로 쓰게 해서, 추가·삭제·순서 변경까지 화면에서 끝낸다.
+
+    page  — "home"(홈 하단) / "about"(동아리 소개). 페이지별로 목록이 갈린다.
+    body  — 마크다운. 프론트가 안전한 부분집합만 렌더한다(HTML 주입 불가).
+    """
+
+    __tablename__ = "content_sections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    page = Column(String, nullable=False, default="about", server_default="about")
+    title = Column(String, nullable=True)   # 없으면 제목 없이 본문만 렌더
+    body = Column(Text, nullable=False, default="", server_default="")
+    # 정렬 기준. 화면에서 위/아래로 옮길 때 이 값만 바꾼다.
+    sort_order = Column(Integer, nullable=False, default=0, server_default="0")
+    # 지우지 않고 잠시 내리고 싶을 때가 있다 (준비 중인 안내 등)
+    visible = Column(Boolean, nullable=False, default=True, server_default="true")
+    updated_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    updated_at = Column(DateTime, nullable=True)
+
+
 class SwimSession(Base):
     """정기수영 회차 (관리자가 '정기수영 열기'로 생성)."""
 

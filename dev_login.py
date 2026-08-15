@@ -6,6 +6,7 @@
     python dev_login.py alumni         # 졸업생 테스트 계정
     python dev_login.py guest          # 외부인 테스트 계정
     python dev_login.py executive      # 임원진(재학생) 테스트 계정
+    python dev_login.py admin          # 관리자 — 역할 변경까지 되는 최고 권한
 
 프론트 로그인 화면은 카카오 버튼만 남아 있고, 로컬에서는 카카오 Redirect URI 등록 없이는
 로그인이 안 된다. 이 스크립트는 그 과정을 건너뛰고 붙여넣기용 코드를 출력한다.
@@ -29,6 +30,9 @@ PRESETS = {
     "alumni": ("alumni", "member", "테스트졸업생"),
     "guest": ("guest", "member", "테스트외부인"),
     "executive": ("student", "executive", "테스트임원진"),
+    # 관리자 — 임원진 권한 전부 + 역할 변경(임원진 임명·해제).
+    # 역할 변경만 get_current_admin 이라 executive 로는 403이 난다.
+    "admin": ("student", "admin", "테스트관리자"),
 }
 
 
@@ -52,6 +56,11 @@ def pick_user(db, arg: str | None) -> User:
         user.phone_number = "01000000000" if membership == "student" else None
         user.college = None if membership == "guest" else "공과대학"
         user.department = None if membership == "guest" else "컴퓨터공학과"
+        # ⚠️ 학번·승인 상태를 채우지 않으면 어느 페이지를 열든 온보딩으로 튕긴다.
+        #    프론트가 '실명 + 학번'으로 가입 완료를 판정하고, 미완료면 되돌리기 때문이다.
+        #    테스트 계정은 '가입을 마친 상태'여야 화면을 볼 수 있다.
+        user.admission_year = "21"
+        user.approval_status = "approved"
         db.commit()
         db.refresh(user)
         return user

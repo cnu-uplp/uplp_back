@@ -77,6 +77,40 @@ class PositionUpdate(BaseModel):
     position: str
 
 
+class ContentSectionCreate(BaseModel):
+    page: str = "about"           # "home" | "about"
+    title: str | None = None
+    body: str = ""                # 마크다운
+    sortOrder: int | None = None  # 없으면 맨 뒤에 붙인다
+    visible: bool = True
+
+
+class ContentSectionUpdate(BaseModel):
+    """보낸 필드만 반영한다."""
+
+    title: str | None = None
+    body: str | None = None
+    sortOrder: int | None = None
+    visible: bool | None = None
+
+
+class ContentReorder(BaseModel):
+    # 화면에 보이는 순서대로의 섹션 id 목록
+    ids: list[int]
+
+
+class ContentSectionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int
+    page: str
+    title: str | None = None
+    body: str
+    sortOrder: int = Field(validation_alias="sort_order")
+    visible: bool
+    updatedAt: datetime | None = Field(default=None, validation_alias="updated_at")
+
+
 class SwimSessionCreate(BaseModel):
     meetDate: str        # 모이는 날 (YYYY-MM-DD)
     meetTime: str        # 모이는 시각 (HH:MM)
