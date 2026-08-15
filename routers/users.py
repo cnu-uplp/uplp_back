@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from config import settings
 from database import get_db
 from deps import (
     APPROVAL_APPROVED,
@@ -72,9 +73,13 @@ def update_me(
         current.role = ROLE_MEMBER
 
     current.membership = payload.membership
+    # 승인제를 끈 운영(시범·데모)에서는 정보를 넣는 즉시 승인 처리한다.
+    # 여기 한 곳에서 상태를 바꿔두면 신청·명단 조회 등 나머지 검사는 손댈 필요가 없다.
+    if not settings.require_approval:
+        current.approval_status = APPROVAL_APPROVED
     # 가입 정보를 (다시) 제출하면 승인 대기로 돌아간다.
     # 이미 승인된 회원이 학과만 고쳤다고 다시 대기시키면 안 되므로 거절 상태만 되살린다.
-    if current.approval_status not in (APPROVAL_APPROVED, APPROVAL_PENDING):
+    elif current.approval_status not in (APPROVAL_APPROVED, APPROVAL_PENDING):
         current.approval_status = APPROVAL_PENDING
     if payload.name is not None:
         current.name = payload.name

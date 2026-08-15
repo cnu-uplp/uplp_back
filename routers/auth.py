@@ -101,6 +101,14 @@ def kakao_login(payload: KakaoLoginRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+    # 승인제를 끈 운영(시범·데모)에서는 로그인하는 순간 대기 상태를 푼다.
+    # 이렇게 해두면 승인제를 켜고 운영하다 끈 경우에도, 이미 대기 중이던 사람들이
+    # 재로그인만으로 풀린다(관리자가 한 명씩 눌러줄 필요가 없다).
+    if not settings.require_approval and user.approval_status == "pending":
+        user.approval_status = "approved"
+        db.commit()
+        db.refresh(user)
+
     access_token = create_access_token(subject=str(user.id))
     return AuthResponse(accessToken=access_token, user=UserInfo.model_validate(user))
 

@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     # 예) ADMIN_KAKAO_IDS="1234567890,2345678901"
     admin_kakao_ids: str = ""
 
+    # 가입 승인제 사용 여부.
+    #   True(기본)  임원진이 승인해야 정기수영 신청·명단 실명 조회가 열린다
+    #   False       가입 정보를 넣는 즉시 승인 처리 (시범 운영·데모용)
+    # ⚠️ 데모가 끝나면 REQUIRE_APPROVAL 환경변수를 지워 기본값(True)으로 되돌릴 것.
+    #    켜두지 않으면 아무나 가입해서 바로 신청하고 명단의 실명까지 볼 수 있다.
+    require_approval: bool = True
+
     # 스포렉스 레인대관 신청서에 들어가는 동아리 정보.
     # 담당자 실명·연락처는 개인정보이므로 코드에 기본값을 두지 않는다.
     # 반드시 환경변수(CLUB_SIGNER, CLUB_CONTACT)로 주입할 것.
