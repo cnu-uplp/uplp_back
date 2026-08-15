@@ -3,11 +3,19 @@ from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
-from deps import get_current_staff, get_current_user, get_current_user_optional
+from deps import (
+    APPROVAL_APPROVED,
+    MEMBERSHIP_STUDENT,
+    ROSTER_VISIBLE_MEMBERSHIPS,
+    get_current_staff,
+    get_current_user,
+    get_current_user_optional,
+)
 from models import SwimApplication, SwimSession, User
 from schemas import SwimApplyRequest, SwimCapacityUpdate, SwimSessionCreate
 
@@ -152,6 +160,21 @@ def apply(
     db: Session = Depends(get_db),
 ):
     """선착순 신청. 후순위 상태 회원(+제도 적용 세션)은 후순위 대기열로 들어간다."""
+    # 재학생만 신청할 수 있다. 졸업생·외부인은 프론트에서도 버튼을 숨기지만,
+    # 개발자 도구로 우회해도 여기서 막힌다.
+    # (대관 명단에 이름+전화번호가 들어가는데 학생 외에는 연락처를 받지 않기 때문)
+    if user.membership != MEMBERSHIP_STUDENT:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "정기수영 신청은 재학생 부원만 가능합니다.",
+        )
+    # 임원진 승인 전에는 신청할 수 없다 (둘러보기는 가능).
+    if user.approval_status != APPROVAL_APPROVED:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "임원진 승인 후 신청할 수 있습니다.",
+        )
+
     s = db.get(SwimSession, sid)
     if s is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "정기수영을 찾을 수 없습니다.")
@@ -179,7 +202,17 @@ def apply(
             session_id=sid, user_id=user.id, division=payload.division, queue=queue, applied_at=now
         )
     )
-    db.commit()
+    # 위의 existing 조회와 이 INSERT 사이는 원자적이지 않다.
+    # 더블클릭·재시도로 요청이 둘 동시에 들어오면 양쪽 다 "신청 없음"으로 판단해
+    # 둘 다 INSERT 하고, uq_swim_app_session_user 제약에 걸려 뒤엣것이 터진다.
+    # 그대로 두면 500이 나가서 "실패한 줄 알고 또 누르는" 사고가 난다 — 409로 돌려준다.
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "이미 신청했습니다. (취소 후 다시 신청 가능)"
+        )
 
     apps = db.query(SwimApplication).filter(SwimApplication.session_id == sid).all()
     return _serialize_session(s, apps, now, user)
@@ -359,12 +392,25 @@ def delete_session(
 
 
 @router.get("/sessions/{sid}/roster")
-def roster(sid: int, db: Session = Depends(get_db)):
-    """명단 대시보드 — 로그인 없이 모두 조회 가능.
-    개인정보 보호를 위해 '이름만' 노출한다 (연락처·학과는 관리자 docx 전용)."""
+def roster(
+    sid: int,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """명단 대시보드 — 누구나 '몇 명 신청했는지'는 볼 수 있다.
+
+    다만 실명은 개인정보이므로 재학생·졸업생(로그인 상태)에게만 보인다.
+    외부인과 비로그인에게는 "***" 로 마스킹한다.
+    (연락처·학과는 어느 경우에도 내보내지 않는다 — 관리자 docx 전용)"""
     s = db.get(SwimSession, sid)
     if s is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "정기수영을 찾을 수 없습니다.")
+
+    can_see_names = (
+        user is not None
+        and user.membership in ROSTER_VISIBLE_MEMBERSHIPS
+        and user.approval_status == APPROVAL_APPROVED  # 승인 전에는 외부인과 같이 마스킹
+    )
 
     apps = db.query(SwimApplication).filter(SwimApplication.session_id == sid).all()
     user_ids = {a.user_id for a in apps}
@@ -373,6 +419,8 @@ def roster(sid: int, db: Session = Depends(get_db)):
     )
 
     def name_of(a: SwimApplication) -> str:
+        if not can_see_names:
+            return "***"
         u = users.get(a.user_id)
         if u is None:
             return f"회원{a.user_id}"

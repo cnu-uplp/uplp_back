@@ -4,13 +4,13 @@
 
 프론트엔드는 별도 Next.js 프로젝트(`uplp_front`)입니다.
 
-- 배포: https://uplp-back.onrender.com (Render)
-- API 문서: `/docs` (Swagger UI)
-- API 명세서: Notion — `The uplp / API 명세서`
+> ⚠️ **이 저장소는 공개되어 있습니다.**
+> 실제 키·비밀번호·회원 개인정보(실명·전화번호·카카오 id)를 코드나 문서에 적지 마세요.
+> 전부 환경변수로만 주입합니다. 자세한 API 명세는 Notion(비공개)에서 관리합니다.
 
 ## 요구 사항
 
-- Python 3.11+ (배포 이미지는 3.11-slim)
+- Python 3.11+
 - PostgreSQL
 
 ## 설치
@@ -23,40 +23,23 @@ pip install -r requirements.txt
 
 ## 환경 변수
 
-프로젝트 루트에 `.env` 파일을 만듭니다.
-
-```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/uplp
-JWT_SECRET_KEY=change-this-secret
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=1440
-
-# 카카오 로그인
-KAKAO_REST_API_KEY=
-KAKAO_CLIENT_SECRET=
-
-# 관리자 부트스트랩 (콤마 구분)
-ADMIN_KAKAO_IDS=
-
-# 레인대관 신청서에 들어가는 동아리 정보
-CLUB_NAME=우파루파
-CLUB_SIGNER=유진우
-CLUB_CONTACT=010-0000-0000
-RENTAL_HOURS=2시간
-
-# 우파루파 대화 (선택)
-GROQ_API_KEY=
-GROQ_MODEL=llama-3.1-8b-instant
-```
+프로젝트 루트에 `.env`를 만듭니다. **`.env`는 절대 커밋하지 않습니다.**
 
 | 변수 | 설명 |
 |---|---|
+| `DATABASE_URL` | PostgreSQL 접속 주소 |
+| `JWT_SECRET_KEY` | JWT 서명 키. 충분히 긴 랜덤 문자열 |
+| `JWT_ALGORITHM` / `ACCESS_TOKEN_EXPIRE_MINUTES` | 기본값 `HS256` / `1440` |
 | `KAKAO_REST_API_KEY` | 카카오 개발자 콘솔의 REST API 키 |
-| `KAKAO_CLIENT_SECRET` | 콘솔에서 Client Secret을 **켠 경우에만** 필요. 켜놓고 값을 안 넣으면 `KOE010`이 납니다 |
-| `ADMIN_KAKAO_IDS` | 이 카카오 id로 로그인하면 `role=admin`이 부여됩니다 |
-| `CLUB_*` · `RENTAL_HOURS` | 레인대관 신청서 자동 생성에 들어가는 값. 임원이 바뀌면 이 값만 교체하면 됩니다 |
+| `KAKAO_CLIENT_SECRET` | 콘솔에서 Client Secret을 켠 경우에만 |
+| `ADMIN_KAKAO_IDS` | 관리자 권한을 줄 카카오 id 목록 (콤마 구분) |
+| `CLUB_NAME` · `CLUB_SIGNER` · `CLUB_CONTACT` · `RENTAL_HOURS` | 레인대관 신청서에 들어가는 동아리 정보 |
+| `GROQ_API_KEY` · `GROQ_MODEL` | 마스코트 대화 기능(선택) |
 
-> `.env`에 여분 값(`PYTHON_VERSION` 등)이 있어도 무시하고 기동합니다 (`extra = "ignore"`).
+`CLUB_SIGNER`(담당자 실명)와 `CLUB_CONTACT`(연락처)는 **개인정보라 코드에 기본값이 없습니다.**
+넣지 않으면 신청서의 해당 칸이 비어서 나옵니다. 배포 환경변수에만 넣으세요.
+
+> `.env`에 여분 값이 있어도 무시하고 기동합니다 (`extra = "ignore"`).
 
 ## DB 준비
 
@@ -68,11 +51,13 @@ psql -d postgres -c "CREATE DATABASE uplp OWNER postgres;"
 컬럼이 추가된 경우 `main.py`가 기동 시 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`를 돌리므로
 기존 DB를 지우지 않아도 마이그레이션됩니다.
 
-로컬 검증용 관리자 계정(`admin` / `admin123`, `role=admin`)이 필요하면:
+로컬 개발용 관리자 계정이 필요하면 비밀번호를 직접 정해서 만듭니다.
 
 ```bash
-python seed_admin.py
+SEED_ADMIN_PASSWORD='직접-정한-긴-비밀번호' python seed_admin.py
 ```
+
+**운영 환경에서는 쓰지 마세요.** 운영 관리자는 `ADMIN_KAKAO_IDS`(카카오 로그인)로 지정합니다.
 
 ## 실행
 
@@ -82,16 +67,28 @@ uvicorn main:app --reload --port 8000
 
 ## 프론트엔드 연동
 
-CORS는 `main.py`에서 `http://localhost:3000` 과 `https://uplp-front.vercel.app` 를 허용합니다.
-다른 주소를 쓴다면 `allow_origins`를 맞춰 수정해야 합니다.
+CORS 허용 출처는 `main.py`에서 관리합니다. 배포 주소가 바뀌면 `allow_origins`를 맞춰 수정하세요.
+
+## 다루는 개인정보
+
+회원가입을 따로 두지 않고 카카오 로그인만 쓰는 것도, 보관 항목을 줄이기 위한 결정입니다.
+
+| 항목 | 용도 | 비고 |
+|---|---|---|
+| 카카오 id · 닉네임 | 로그인 식별 | |
+| 전화번호 | 레인대관 신청서 제출 | 시설 측 요구 항목 |
+| 단과대 · 학과 | 동아리 회원 확인 | |
+
+- 신청서(docx)에는 **회원 실명과 전화번호가 들어갑니다.** 생성된 파일을 저장소나 공유 드라이브에 올리지 마세요.
+- 신청서 원본 양식에 "개인 신상정보는 대관 신청한 날짜 일주일 후 파기됩니다"라고 적혀 있습니다. 실제 파기 절차는 아직 코드에 없습니다 — 운영 시 수동으로 챙겨야 합니다.
 
 ## 데이터 모델
 
 | 테이블 | 설명 |
 |---|---|
-| `users` | 카카오 회원(`kakao_id`, `nickname`, `phone_number`, `college`, `department`)과 관리자 계정(`username`, `hashed_password`)을 함께 담습니다. `role`은 `member`/`admin`, `is_deprioritized`는 후순위 대상 여부 |
-| `swim_sessions` | 정기수영 회차. 모이는 날짜·시각·위치, 훈련부/진도부 정원, 후순위 제도 사용 여부, 신청 시작/마감 시각(UTC) |
-| `swim_applications` | 신청 내역. `division`(training/progress), `queue`(normal/late), `merged`(후순위 병합 여부), `applied_at`(선착순 기준 시각) |
+| `users` | 카카오 회원과 관리자 계정을 함께 담습니다. `role`은 `member`/`admin`, `is_deprioritized`는 후순위 대상 여부 |
+| `swim_sessions` | 정기수영 회차. 날짜·시각·위치, 부서별 정원, 후순위 제도 사용 여부, 신청 시작/마감 시각(UTC) |
+| `swim_applications` | 신청 내역. `division`, `queue`, `merged`, `applied_at`(선착순 기준 시각) |
 
 ## 정기수영 순번 규칙
 
@@ -114,13 +111,12 @@ assigned, reserve = ordered[:cap], ordered[cap:]
 
 ## 레인대관 신청서 생성
 
-`GET /api/swim/sessions/{id}/roster.docx` 는 스포렉스에 제출하는
-**CNU SPOREX Swimming 레인대관 신청서**(원본 HWP 양식)를 `.docx`로 재현해 내려줍니다.
+정기수영이 마감되면 스포렉스 제출용 신청서(원본 HWP 양식)를 `.docx`로 재현해 내려받습니다.
 구현은 `routers/swim.py` 의 `roster_docx()` 한 곳에 모여 있습니다.
 
 - 원본 PDF에서 좌표·글자 크기·행 높이·테두리 굵기를 실측해 **A4 3페이지를 1mm 이내로 재현**합니다.
 - 자동 기입: 참석자 이름 / 전화번호 / 사용 희망 날짜 / 이용 인원. 참석 확인란은 현장 서명용으로 비웁니다.
-- 명단에는 **배정 인원만** 들어갑니다(예비·후순위 대기 제외). 훈련부·진도부는 한 표로 합칩니다.
+- 명단에는 **배정 인원만** 들어갑니다(예비·후순위 대기 제외).
 - **마감된 회차**만, **관리자만** 받을 수 있습니다.
 
 ### 수정할 때 주의할 점
@@ -138,32 +134,24 @@ assigned, reserve = ordered[:cap], ordered[cap:]
 
 ## API
 
-| 에픽 | 기능 | Method | Path | JWT | 비고 |
-|---|---|---|---|---|---|
-| 인증 | 로그인 | POST | `/api/auth/login` | 불필요 | 관리자 계정용. bcrypt 검증 |
-| 인증 | 카카오 로그인 | POST | `/api/auth/kakao` | 불필요 | 인가 코드 → 토큰 교환 → JWT 발급 |
-| 사용자 | 내 정보 조회 | GET | `/api/users/me` | 필요 | |
-| 사용자 | 내 정보 수정 | PATCH | `/api/users/me` | 필요 | 전화번호(하이픈 없이)·단과대·학과 |
-| 사용자 | 후순위 지정/해제 | PATCH | `/api/users/{id}/deprioritized` | 필요 | 관리자 전용 |
-| 정기수영 | 회차 목록 | GET | `/api/swim/sessions` | 선택 | 로그인 시 내 신청 상태 포함 |
-| 정기수영 | 회차 개설 | POST | `/api/swim/sessions` | 필요 | 관리자 전용 |
-| 정기수영 | 신청 | POST | `/api/swim/sessions/{id}/apply` | 필요 | 신청 기간에만 |
-| 정기수영 | 신청 취소 | DELETE | `/api/swim/sessions/{id}/apply` | 필요 | 취소 즉시 예비 인원이 당겨짐 |
-| 정기수영 | 회차 수정 | PATCH | `/api/swim/sessions/{id}` | 필요 | 관리자 전용, **오픈 전까지만** |
-| 정기수영 | 정원 조정 | PATCH | `/api/swim/sessions/{id}/capacity` | 필요 | 관리자 전용, 신청 중에도 가능 |
-| 정기수영 | 후순위 병합 | POST | `/api/swim/sessions/{id}/merge` | 필요 | 관리자 전용 |
-| 정기수영 | 마감 | POST | `/api/swim/sessions/{id}/close` | 필요 | 관리자 전용 |
-| 정기수영 | 회차 삭제 | DELETE | `/api/swim/sessions/{id}` | 필요 | 관리자 전용 |
-| 정기수영 | 명단 조회 | GET | `/api/swim/sessions/{id}/roster` | 불필요 | 전체 공개 (대시보드) |
-| 정기수영 | 레인대관 신청서 | GET | `/api/swim/sessions/{id}/roster.docx` | 필요 | 관리자 전용, **마감 후에만** |
-| 기타 | 우파루파 대화 | POST | `/api/upalupa/chat` | 불필요 | Groq(OpenAI 호환) |
+전체 명세(경로·요청·응답·권한)는 **Notion의 `API 명세서`** 에서 관리합니다.
+`/docs`(Swagger UI)에서도 볼 수 있습니다.
 
-권한은 프론트에서 UI를 숨기는 것과 별개로 서버에서 다시 검사합니다(`deps.get_current_admin` → 403).
-개발자 도구로 버튼을 되살려도 통과하지 못합니다.
+에픽 단위 요약만 적어둡니다.
 
-> **자체 회원가입(`POST /api/auth/join`)은 제공하지 않습니다.**
-> 일반 회원은 카카오 로그인만 쓰고, 관리자 계정은 `seed_admin.py`로 직접 만듭니다.
-> 개인정보를 최소한만 보관하기로 한 결정에 따라, 누구나 계정을 만들 수 있는 경로를 열어두지 않습니다.
+| 에픽 | 내용 |
+|---|---|
+| 인증 | 카카오 로그인, 관리자 로그인 |
+| 사용자 | 내 정보 조회·수정, 후순위 지정 |
+| 정기수영 | 회차 관리(개설·수정·삭제·마감), 신청·취소, 정원 조정, 후순위 병합, 명단 조회, 신청서 다운로드 |
+| 기타 | 마스코트 대화 |
+
+### 권한
+
+- 관리자 전용 엔드포인트는 `deps.get_current_admin`으로 검사합니다(→ 403).
+  프론트에서 UI를 숨기는 것과 **별개로** 서버에서 다시 막으므로, 개발자 도구로 버튼을 되살려도 통과하지 못합니다.
+- **자체 회원가입은 제공하지 않습니다.** 일반 회원은 카카오 로그인만 쓰고,
+  관리자 계정은 `seed_admin.py`로 직접 만듭니다.
 
 ## 프로젝트 구조
 
@@ -176,32 +164,31 @@ assigned, reserve = ordered[:cap], ordered[cap:]
 ├── schemas.py         # Pydantic 요청·응답 스키마
 ├── security.py        # 비밀번호 해싱, JWT 발급
 ├── deps.py            # get_current_user / get_current_user_optional / get_current_admin
-├── seed_admin.py      # 로컬 검증용 관리자 계정 생성
+├── seed_admin.py      # 로컬 개발용 관리자 계정 생성
 └── routers/
-    ├── auth.py        # 회원가입 · 로그인 · 카카오 로그인
+    ├── auth.py        # 로그인 · 카카오 로그인
     ├── users.py       # 내 정보 · 후순위 지정
     ├── swim.py        # 정기수영 전체 + 레인대관 신청서 docx 생성
-    └── upalupa.py     # 우파루파 대화
+    └── upalupa.py     # 마스코트 대화
 ```
 
-## 배포 (Render)
+## 배포
 
 Docker 런타임으로 배포합니다(`Dockerfile`, `render.yaml`).
 
-```
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
-
-- 환경 변수는 Render 대시보드에서 직접 넣습니다. `render.yaml`에는 `sync: false`로 두어 git에 올라가지 않게 합니다.
+- 환경 변수는 호스팅 대시보드에서 직접 넣습니다. `render.yaml`에는 `sync: false`로 두어 git에 올라가지 않게 합니다.
 - **git에 푸시한다고 자동 반영되지 않습니다.** 대시보드에서 재배포해야 합니다.
-  배포가 최신인지 확인하려면 `https://uplp-back.onrender.com/openapi.json` 의 경로 목록을 보면 됩니다.
 
 ## 카카오 로그인 설정
 
 카카오 개발자 콘솔에서 아래를 맞춰야 합니다.
 
-- **Redirect URI 등록** — `https://uplp-front.vercel.app/login/kakao/callback`
-  (로컬 테스트 시 `http://localhost:3000/login/kakao/callback`도 함께)
+- **Redirect URI 등록** — 배포 주소와 로컬 주소 각각 `/login/kakao/callback`
 - **동의 항목은 콘솔에서만 관리합니다.** 코드에서 `scope`를 넘기지 않습니다.
   콘솔에서 끈 항목을 코드가 요청하면 `KOE205`가 납니다.
 - Client Secret을 콘솔에서 켰다면 `KAKAO_CLIENT_SECRET`을 반드시 넣어야 합니다(`KOE010`).
+
+## Third-Party Notices
+
+See [`../../uplp_front/THIRD-PARTY-NOTICES.txt`](../../uplp_front/THIRD-PARTY-NOTICES.txt)
+for third-party open-source licenses used by the web client.

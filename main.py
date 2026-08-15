@@ -15,6 +15,34 @@ except Exception as exc:  # noqa: BLE001
 # 기배포 DB(users 테이블이 이미 있는 경우)에 신규 컬럼을 idempotent하게 보강한다.
 try:
     with engine.begin() as conn:
+        conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS membership VARCHAR "
+                "NOT NULL DEFAULT 'student'"
+            )
+        )
+        conn.execute(
+            text("ALTER TABLE users ADD COLUMN IF NOT EXISTS admission_year VARCHAR")
+        )
+        # 승인 컬럼은 '새로 생겼을 때만' 기존 회원을 일괄 승인한다.
+        # 매 기동마다 UPDATE를 돌리면 임원진이 거절해 둔 사람이 되살아난다.
+        approval_existed = conn.execute(
+            text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='users' AND column_name='approval_status'"
+            )
+        ).first()
+        conn.execute(
+            text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status VARCHAR "
+                "NOT NULL DEFAULT 'pending'"
+            )
+        )
+        if not approval_existed:
+            # 승인제 도입 이전에 가입한 회원이 갑자기 전부 잠기면 정기수영을 못 연다.
+            conn.execute(text("UPDATE users SET approval_status = 'approved'"))
+            print("[migrate] 기존 회원 전원을 approved로 설정했습니다.")
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS position VARCHAR"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS college VARCHAR"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR"))
         conn.execute(
@@ -41,10 +69,11 @@ app.add_middleware(
         "http://localhost:3000",
         "https://uplp-front.vercel.app",  # 프로덕션 프론트
     ],
-    # Vercel 배포/프리뷰 도메인 허용 (데모용). 프론트는 Vercel에 있으므로 여기가 핵심.
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    # (참고) 백엔드를 어디에 올리든 CORS는 '프론트 도메인' 기준입니다.
-    # 프론트가 커스텀 도메인이면 그 도메인을 allow_origins에 추가하세요.
+    # ⚠️ 여기에 와일드카드(allow_origin_regex=r"https://.*\.vercel\.app")를 두지 말 것.
+    #    누구나 Vercel에 사이트를 배포해서 이 API를 호출할 수 있게 된다.
+    # (참고) 백엔드를 어디에 올리든 CORS는 '프론트 도메인' 기준이다.
+    #        백엔드 주소(api.*)는 여기 넣을 필요가 없고,
+    #        프론트가 커스텀 도메인으로 바뀌면 그 도메인을 allow_origins에 추가한다.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

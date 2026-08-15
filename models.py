@@ -26,6 +26,29 @@ class User(Base):
     phone_number = Column(String, nullable=True)
     college = Column(String, nullable=True)      # 단과대
     department = Column(String, nullable=True)    # 학과
+    # 학번 뒤 2자리만 받는다 ("21"). 동명이인을 가르는 용도라 전체 학번은 받지 않는다
+    # — 개인정보를 필요한 만큼만 수집한다는 방침.
+    admission_year = Column(String, nullable=True)
+    # 소속: "student"(재학생 부원) / "alumni"(졸업생) / "guest"(외부인)
+    #   role(권한)과는 다른 축이다. 임원진·관리자는 student만 될 수 있고,
+    #   정기수영 신청도 student만 가능하다(대관 명단에 전화번호가 필요하므로).
+    #   졸업생 모임의 '회장' 같은 직위는 권한이 아니라 표시용이라 role로 표현하지 않는다.
+    membership = Column(
+        String, nullable=False, default="student", server_default="student"
+    )
+
+    # 가입 승인: "pending"(임원진 승인 대기) / "approved" / "rejected"
+    #   role·membership과 또 다른 축이다. 승인 전에는 둘러보기만 되고
+    #   정기수영 신청·명단 실명 조회가 막힌다.
+    approval_status = Column(
+        String, nullable=False, default="pending", server_default="pending"
+    )
+
+    # 직위: "회장" · "부회장" · "홍보부" · "동문회장" 등 자유 입력 (표시 전용).
+    #   권한과 무관하다 — 졸업생 회장처럼 role은 member지만 직위는 있을 수 있다.
+    #   직위는 해마다 바뀌고 동아리마다 이름이 달라서 enum으로 고정하지 않는다.
+    position = Column(String, nullable=True)
+
     # 권한: "member"(일반 부원) / "executive"(임원진) / "admin"(관리자)
     #   executive — 정기수영 열기·마감, 공지 작성, 부원 관리
     #   admin     — executive 권한 전부 + 역할 변경(임원진 임명·해제)
@@ -39,6 +62,11 @@ class User(Base):
     hashed_password = Column(String, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
+
+    @property
+    def display_name(self) -> str:
+        """UserInfo 응답의 displayName. 규칙은 아래 display_name() 하나에만 둔다."""
+        return display_name(self)
 
 
 class Notice(Base):
@@ -96,3 +124,22 @@ class SwimApplication(Base):
     __table_args__ = (
         UniqueConstraint("session_id", "user_id", name="uq_swim_app_session_user"),
     )
+
+
+def display_name(u: "User") -> str:
+    """화면에 쓰는 이름. 동명이인을 학번으로 가르고, 졸업생은 OB를 붙인다.
+
+        김철수 21        재학생
+        김철수 21 OB     졸업생
+
+    ⚠️ 레인대관 신청서(docx)에는 쓰지 않는다 — 그쪽은 스포렉스에 내는 공문서라
+       실명만 들어가야 한다. 그래서 name 필드를 따로 유지한다.
+    """
+    base = u.name or u.nickname or f"회원{u.id}"
+    if not u.admission_year:
+        return base
+    if u.membership == "alumni":
+        return f"{base} {u.admission_year} OB"
+    if u.membership == "student":
+        return f"{base} {u.admission_year}"
+    return base

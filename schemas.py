@@ -14,7 +14,12 @@ class KakaoLoginRequest(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
-    phoneNumber: str
+    # 가입은 재학생·졸업생만 받는다 (외부인 가입 경로는 제거).
+    #   재학생  이름 + 학번 + 전화번호 + 학과
+    #   졸업생  이름 + 학번 + 학과(재학 당시)   — 신청을 못 하므로 연락처는 받지 않음
+    membership: str = "student"      # "student" | "alumni"
+    admissionYear: str | None = None  # 학번 뒤 2자리 ("21")
+    phoneNumber: str | None = None
     name: str | None = None          # 실명 — 대관 명단·인사말에 쓴다
     college: str | None = None      # 단과대
     department: str | None = None    # 학과
@@ -59,6 +64,19 @@ class RoleUpdate(BaseModel):
     role: str  # "member"(일반 부원) | "executive"(임원진) | "admin"(관리자)
 
 
+class MembershipUpdate(BaseModel):
+    membership: str  # "student"(재학생) | "alumni"(졸업생) | "guest"(외부인)
+
+
+class ApprovalUpdate(BaseModel):
+    approval: str  # "approved"(승인) | "rejected"(거절) | "pending"(보류로 되돌림)
+
+
+class PositionUpdate(BaseModel):
+    # "회장" · "홍보부" · "동문회장" 등 자유 입력. 빈 문자열이면 직위 해제.
+    position: str
+
+
 class SwimSessionCreate(BaseModel):
     meetDate: str        # 모이는 날 (YYYY-MM-DD)
     meetTime: str        # 모이는 시각 (HH:MM)
@@ -87,6 +105,12 @@ class UserInfo(BaseModel):
     phoneNumber: str | None = Field(default=None, validation_alias="phone_number")
     college: str | None = None
     department: str | None = None
+    membership: str | None = None
+    admissionYear: str | None = Field(default=None, validation_alias="admission_year")
+    approvalStatus: str | None = Field(default=None, validation_alias="approval_status")
+    # User.display_name 프로퍼티에서 읽는다 ("김철수 21" / "김철수 21 OB")
+    displayName: str | None = Field(default=None, validation_alias="display_name")
+    position: str | None = None
     role: str | None = None
     isDeprioritized: bool | None = Field(default=None, validation_alias="is_deprioritized")
     # 레거시 아이디/비번 유저용 (카카오 유저는 없음)

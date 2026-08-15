@@ -17,13 +17,16 @@ class Settings(BaseSettings):
     kakao_client_secret: str = ""  # 콘솔에서 켰을 때만 사용
 
     # 관리자 부트스트랩: admin 권한을 줄 카카오 id 목록 (콤마 구분)
-    # 예) ADMIN_KAKAO_IDS="5023767808,1234567890"
+    # 예) ADMIN_KAKAO_IDS="1234567890,2345678901"
     admin_kakao_ids: str = ""
 
-    # 스포렉스 레인대관 신청서에 들어가는 동아리 정보 (임원 바뀌면 env로 교체)
+    # 스포렉스 레인대관 신청서에 들어가는 동아리 정보.
+    # 담당자 실명·연락처는 개인정보이므로 코드에 기본값을 두지 않는다.
+    # 반드시 환경변수(CLUB_SIGNER, CLUB_CONTACT)로 주입할 것.
+    # 이 저장소는 공개되어 있다 — 실제 값을 여기 적지 말 것.
     club_name: str = "우파루파"
-    club_signer: str = "유진우"
-    club_contact: str = "010-3058-7675"
+    club_signer: str = ""
+    club_contact: str = ""
     rental_hours: str = "2시간"
 
     class Config:

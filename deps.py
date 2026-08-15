@@ -65,6 +65,39 @@ def get_current_user_optional(
 #   member    일반 부원 — 신청만
 #   executive 임원진   — 정기수영 열기·마감, 공지 작성, 부원 관리
 #   admin     관리자   — 임원진 권한 전부 + 역할 변경(임원진 임명·해제)
+# 소속 체계 (role과 다른 축)
+#   student 재학생 부원 — 정기수영 신청 가능, 임원진·관리자가 될 수 있음
+#   alumni  졸업생     — 명단 조회만. 신청 불가(대관 명단에 전화번호가 필요)
+#   guest   외부인     — 정기수영 존재는 볼 수 있으나 명단은 마스킹, 신청 불가
+MEMBERSHIP_STUDENT = "student"
+MEMBERSHIP_ALUMNI = "alumni"
+MEMBERSHIP_GUEST = "guest"
+VALID_MEMBERSHIPS = (MEMBERSHIP_STUDENT, MEMBERSHIP_ALUMNI, MEMBERSHIP_GUEST)
+# 명단의 실명을 볼 수 있는 소속 (외부인·비로그인은 마스킹)
+ROSTER_VISIBLE_MEMBERSHIPS = (MEMBERSHIP_STUDENT, MEMBERSHIP_ALUMNI)
+
+# 가입 승인 상태 (role·membership과 또 다른 축)
+APPROVAL_PENDING = "pending"
+APPROVAL_APPROVED = "approved"
+APPROVAL_REJECTED = "rejected"
+VALID_APPROVALS = (APPROVAL_PENDING, APPROVAL_APPROVED, APPROVAL_REJECTED)
+# 가입 신청을 받는 소속 — 외부인(guest)은 가입 경로에서 제외했다.
+SIGNUP_MEMBERSHIPS = (MEMBERSHIP_STUDENT, MEMBERSHIP_ALUMNI)
+
+
+def get_current_approved(current: User = Depends(get_current_user)) -> User:
+    """임원진 승인을 받은 회원만 통과. 대기·거절은 403.
+
+    승인 전에도 로그인과 둘러보기는 되어야 한다(막으면 승인을 기다릴 방법이 없다).
+    막는 것은 정기수영 신청처럼 '부원임을 전제로 하는' 기능뿐이다."""
+    if current.approval_status != APPROVAL_APPROVED:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="임원진 승인 후 이용할 수 있습니다.",
+        )
+    return current
+
+
 ROLE_MEMBER = "member"
 ROLE_EXECUTIVE = "executive"
 ROLE_ADMIN = "admin"
