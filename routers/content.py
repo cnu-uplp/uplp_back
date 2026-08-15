@@ -19,6 +19,10 @@ router = APIRouter(prefix="/api/content", tags=["content"])
 # 어느 화면에도 안 나오면서 DB에만 쌓인다.
 VALID_PAGES = ("home", "about")
 
+# 6칸 그리드에서 차지하는 칸 수. 픽셀 자유 배치 대신 칸 단위로만 고르게 해서
+# 어떤 화면 폭에서도 레이아웃이 성립하게 한다. half 4개 = 2x2.
+VALID_WIDTHS = ("full", "half", "third")
+
 BODY_MAX = 20000  # 마크다운 본문 상한 (한 섹션이 페이지를 통째로 먹지 않게)
 
 
@@ -31,6 +35,14 @@ def _check_page(page: str) -> None:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             f"page는 {', '.join(VALID_PAGES)} 중 하나여야 합니다.",
+        )
+
+
+def _check_width(width: str) -> None:
+    if width not in VALID_WIDTHS:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"width는 {', '.join(VALID_WIDTHS)} 중 하나여야 합니다.",
         )
 
 
@@ -71,6 +83,7 @@ def create_section(
     """섹션 추가 — 임원진 이상."""
     _check_page(payload.page)
     _check_body(payload.body)
+    _check_width(payload.width)
 
     order = payload.sortOrder
     if order is None:
@@ -89,6 +102,7 @@ def create_section(
         body=payload.body,
         sort_order=order,
         visible=payload.visible,
+        width=payload.width,
         updated_by=staff.id,
         updated_at=_now(),
     )
@@ -120,6 +134,9 @@ def update_section(
         section.sort_order = payload.sortOrder
     if payload.visible is not None:
         section.visible = payload.visible
+    if payload.width is not None:
+        _check_width(payload.width)
+        section.width = payload.width
 
     section.updated_by = staff.id
     section.updated_at = _now()

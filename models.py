@@ -104,6 +104,11 @@ class ContentSection(Base):
     body = Column(Text, nullable=False, default="", server_default="")
     # 정렬 기준. 화면에서 위/아래로 옮길 때 이 값만 바꾼다.
     sort_order = Column(Integer, nullable=False, default=0, server_default="0")
+    # 가로 폭. 6칸 그리드에서 차지하는 칸 수로 렌더한다.
+    #   "full"(6칸, 한 줄 전체) / "half"(3칸, 2개가 나란히) / "third"(2칸, 3개가 나란히)
+    #   half 4개를 이어 붙이면 2x2가 된다. 픽셀 단위 자유 배치는 화면 크기마다
+    #   깨지므로, 어떤 폭에서도 성립하는 칸 단위로만 고르게 한다.
+    width = Column(String, nullable=False, default="full", server_default="full")
     # 지우지 않고 잠시 내리고 싶을 때가 있다 (준비 중인 안내 등)
     visible = Column(Boolean, nullable=False, default=True, server_default="true")
     updated_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

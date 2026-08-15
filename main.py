@@ -58,6 +58,14 @@ try:
                 "ALTER TABLE swim_applications ADD COLUMN IF NOT EXISTS merged BOOLEAN NOT NULL DEFAULT FALSE"
             )
         )
+        # content_sections는 create_all이 새로 만들지만, 이미 만들어진 뒤에
+        # 추가된 컬럼은 create_all이 손대지 않으므로 여기서 보강한다.
+        conn.execute(
+            text(
+                "ALTER TABLE content_sections ADD COLUMN IF NOT EXISTS width VARCHAR "
+                "NOT NULL DEFAULT 'full'"
+            )
+        )
 except Exception as exc:  # noqa: BLE001
     print(f"[warn] 컬럼 보강 건너뜀: {exc}")
 

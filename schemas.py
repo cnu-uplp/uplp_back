@@ -83,6 +83,7 @@ class ContentSectionCreate(BaseModel):
     body: str = ""                # 마크다운
     sortOrder: int | None = None  # 없으면 맨 뒤에 붙인다
     visible: bool = True
+    width: str = "full"           # "full" | "half" | "third"
 
 
 class ContentSectionUpdate(BaseModel):
@@ -92,6 +93,7 @@ class ContentSectionUpdate(BaseModel):
     body: str | None = None
     sortOrder: int | None = None
     visible: bool | None = None
+    width: str | None = None
 
 
 class ContentReorder(BaseModel):
@@ -108,6 +110,7 @@ class ContentSectionOut(BaseModel):
     body: str
     sortOrder: int = Field(validation_alias="sort_order")
     visible: bool
+    width: str = "full"
     updatedAt: datetime | None = Field(default=None, validation_alias="updated_at")
 
 
