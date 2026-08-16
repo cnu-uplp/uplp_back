@@ -27,7 +27,11 @@ router = APIRouter(prefix="/api/notices", tags=["notices"])
 VALID_CATEGORIES = {"notice", "schedule"}
 
 # 업로드 허용 확장자. 실행 가능한 파일이 올라가 정적 경로로 서빙되는 것을 막는다.
-ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+#   heic/heif — 아이폰 기본 사진 형식. Safari가 보통 JPEG으로 바꿔 올리지만
+#   그대로 올라오는 경우가 있어 함께 받는다.
+ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
+# ⚠️ nginx의 client_max_body_size 가 이 값보다 작으면 요청이 앱에 닿기도 전에 413으로
+#    잘린다(기본 1MB). 서버 설정에서 10M 이상으로 올려둘 것.
 MAX_IMAGE_BYTES = 5 * 1024 * 1024   # 5MB — 폰 사진 한 장 기준
 COMMENT_MAX = 1000
 
