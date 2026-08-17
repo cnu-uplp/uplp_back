@@ -5,13 +5,8 @@ from sqlalchemy.orm import Session
 from config import settings
 from database import get_db
 from models import User
-from schemas import (
-    AuthResponse,
-    KakaoLoginRequest,
-    LoginRequest,
-    UserInfo,
-)
-from security import create_access_token, verify_password
+from schemas import AuthResponse, KakaoLoginRequest, UserInfo
+from security import create_access_token
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -19,10 +14,12 @@ KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_USERME_URL = "https://kapi.kakao.com/v2/user/me"
 
 
-# 자체 회원가입(/join)은 제공하지 않는다.
-# 일반 회원은 카카오 로그인만 쓰고(개인정보를 최소한만 보관하기 위한 결정),
-# 관리자 계정은 seed_admin.py 로 직접 생성한다.
-# 누구나 호출해 계정을 만들 수 있는 경로를 열어둘 이유가 없어 제거했다.
+# 로그인 경로는 카카오 하나뿐이다.
+#   - 자체 회원가입(/join): 누구나 계정을 만들 수 있는 경로를 열어둘 이유가 없어 제거.
+#   - 아이디/비밀번호 로그인(/login): 실제로 쓰지 않는데 시도 횟수 제한도 없어
+#     무제한 대입 공격 표면만 남아 있었다. 2026-08-16 제거.
+#     로컬 개발용 토큰이 필요하면 dev_login.py 를 쓴다.
+# 개인정보를 최소한만 보관한다는 방침과도 맞는다 — 비밀번호를 아예 다루지 않는다.
 
 
 @router.post("/kakao", response_model=AuthResponse)
@@ -108,19 +105,6 @@ def kakao_login(payload: KakaoLoginRequest, db: Session = Depends(get_db)):
         user.approval_status = "approved"
         db.commit()
         db.refresh(user)
-
-    access_token = create_access_token(subject=str(user.id))
-    return AuthResponse(accessToken=access_token, user=UserInfo.model_validate(user))
-
-
-@router.post("/login", response_model=AuthResponse)
-def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == payload.username).first()
-    if not user or not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="아이디 또는 비밀번호가 일치하지 않습니다.",
-        )
 
     access_token = create_access_token(subject=str(user.id))
     return AuthResponse(accessToken=access_token, user=UserInfo.model_validate(user))

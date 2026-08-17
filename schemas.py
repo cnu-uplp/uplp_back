@@ -3,11 +3,6 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-
-
 class KakaoLoginRequest(BaseModel):
     code: str
     redirectUri: str

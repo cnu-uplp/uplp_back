@@ -1,19 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt
-from passlib.context import CryptContext
 
 from config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def hash_password(plain_password: str) -> str:
-    return pwd_context.hash(plain_password)
+# 비밀번호는 다루지 않는다. 로그인은 카카오 하나뿐이라 해싱·검증 함수가 필요 없고,
+# 안 쓰는 인증 경로를 남겨두면 공격 표면만 된다. (2026-08-16 아이디/비밀번호 로그인 제거)
 
 
 def create_access_token(subject: str) -> str:

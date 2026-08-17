@@ -5,7 +5,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:postgres@localhost:5432/uplp"
     jwt_secret_key: str = "change-this-secret"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60 * 24
+    # 로그인 유지 시간(분). 짧게 두는 대신, 만료되면 프론트가
+    # "인증이 만료되었습니다. 다시 로그인해주세요." 를 띄우고 로그인 화면으로 보낸다.
+    # 대관 명단에 실명·연락처가 들어가는 서비스라 세션을 오래 열어두지 않는다.
+    access_token_expire_minutes: int = 30
 
     # Groq (OpenAI 호환) - 우파루파 대화용
     groq_api_key: str = ""

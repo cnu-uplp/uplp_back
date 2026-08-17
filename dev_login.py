@@ -40,7 +40,7 @@ def pick_user(db, arg: str | None) -> User:
     if arg is None:
         user = db.query(User).filter(User.role == "admin").first()
         if user is None:
-            sys.exit("admin 계정이 없습니다. 먼저 `python seed_admin.py` 를 실행하세요.")
+            sys.exit("admin 계정이 없습니다. `python dev_login.py admin` 으로 만드세요.")
         return user
 
     if arg in PRESETS:
