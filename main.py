@@ -1,13 +1,16 @@
+from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from jose import JWTError, jwt
 from sqlalchemy import text
 
 from config import settings
 from database import Base, engine
 from routers import auth, content, notices, swim, upalupa, users
+from security import create_access_token
 
 # DB가 없어도(예: 우피 채팅만 데모하는 배포 환경) 앱은 기동되도록 감싼다.
 try:
@@ -92,7 +95,40 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # 갱신된 토큰을 프론트가 읽을 수 있게 노출한다.
+    # ⚠️ 브라우저는 CORS 응답에서 기본 몇 개 헤더만 JS에 넘긴다. 여기에 안 적으면
+    #    서버는 헤더를 보냈는데 프론트에서는 null로 읽히고 에러도 안 난다
+    #    — 슬라이딩 갱신이 조용히 죽는다.
+    expose_headers=["X-Refreshed-Token"],
 )
+
+
+# 토큰 유효기간을 '마지막 요청' 기준으로 밀어준다(슬라이딩 만료).
+#
+# 전에는 로그인 시각 기준 절대 만료였다. 쓰고 있는 도중에도 30분이 되면 끊겨서,
+# 공지를 길게 쓰다가 전송을 누르면 401 → 로그인 화면으로 튕기며 본문이 통째로 날아갔다.
+#
+# 요청이 올 때마다 새 토큰을 만들면 낭비이므로, 남은 시간이 절반 이하일 때만 재발급한다.
+# 자리를 비운 사람은 요청이 없으니 예정대로 만료된다 — 세션을 짧게 두려던 원래 의도
+# (대관 명단에 실명·연락처가 들어간다)는 그대로 지켜진다.
+@app.middleware("http")
+async def slide_token_expiry(request: Request, call_next):
+    res = await call_next(request)
+    token = (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    if token:
+        try:
+            payload = jwt.decode(
+                token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+            )
+            left = payload["exp"] - datetime.now(timezone.utc).timestamp()
+            # 분 * 60 / 2 = 분 * 30 (유효기간의 절반)
+            if 0 < left < settings.access_token_expire_minutes * 30:
+                res.headers["X-Refreshed-Token"] = create_access_token(payload["sub"])
+        except (JWTError, KeyError):
+            # 만료·위조 토큰은 그냥 통과시킨다. 401은 각 엔드포인트가 낸다.
+            pass
+    return res
+
 
 app.include_router(auth.router)
 app.include_router(upalupa.router)
